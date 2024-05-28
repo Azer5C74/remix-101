@@ -17,6 +17,7 @@ import {
   useLoaderData,
   useNavigation,
   useSubmit,
+  LiveReload
 } from "@remix-run/react";
 
 import { createEmptyContact, getContacts } from "./data";
@@ -140,6 +141,8 @@ export default function App() {
           id="detail"
         >
           <Outlet />
+          {process.env.NODE_ENV === "development" ? 
+          <LiveReload/> : null}
         </div>
 
         <ScrollRestoration />
