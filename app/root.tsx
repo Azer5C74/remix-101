@@ -4,7 +4,6 @@ import {
   LinksFunction,
   LoaderFunctionArgs,
 } from "@remix-run/node";
-import { useEffect, useState } from "react";
 import {
   Form,
   Link,
@@ -17,16 +16,20 @@ import {
   useLoaderData,
   useNavigation,
   useSubmit,
-  LiveReload
+  LiveReload,
 } from "@remix-run/react";
+import { ChangeEvent, useEffect, useState, FormEvent } from "react";
 
 import { createEmptyContact, getContacts } from "./data";
+import appStylesHref from "./app.css?url";
 
+// Action to handle form submission for creating a new contact
 export const action = async () => {
   const contact = await createEmptyContact();
   return redirect(`/contacts/${contact.id}/edit`);
 };
 
+// Loader function to fetch contacts based on the query parameter
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
@@ -34,8 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({ contacts, q });
 };
 
-import appStylesHref from "./app.css?url";
-
+// Links function to include the stylesheet
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: appStylesHref },
 ];
@@ -44,20 +46,61 @@ export default function App() {
   const navigation = useNavigation();
   const { contacts, q } = useLoaderData<typeof loader>();
   const submit = useSubmit();
-  const searching =
-    navigation.location &&
-    new URLSearchParams(navigation.location.search).has(
-      "q"
-    );
-
-  // the query now needs to be kept in state
   const [query, setQuery] = useState(q || "");
 
-  // we still have a `useEffect` to synchronize the query
-  // to the component state on back/forward button clicks
+  const searching =
+    navigation.location &&
+    new URLSearchParams(navigation.location.search).has("q");
+
   useEffect(() => {
     setQuery(q || "");
   }, [q]);
+
+  const handleSearchChange = (event: FormEvent<HTMLFormElement>) => {
+    const isFirstSearch = q === null;
+    submit(event.currentTarget, {
+      replace: !isFirstSearch,
+    });
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) =>
+    setQuery(event.currentTarget.value);
+
+  const renderContacts = () => {
+    if (contacts.length) {
+      return (
+        <ul>
+          {contacts.map((contact) => (
+            <li key={contact.id}>
+              <NavLink
+                className={({ isActive, isPending }) =>
+                  isActive ? "active" : isPending ? "pending" : ""
+                }
+                to={`contacts/${contact.id}`}
+              >
+                <Link to={`contacts/${contact.id}`}>
+                  {contact.first || contact.last ? (
+                    <>
+                      {contact.first} {contact.last}
+                    </>
+                  ) : (
+                    <i>No Name</i>
+                  )}{" "}
+                  {contact.favorite ? <span>★</span> : null}
+                </Link>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      );
+    } else {
+      return (
+        <p>
+          <i>No contacts</i>
+        </p>
+      );
+    }
+  };
 
   return (
     <html lang="en">
@@ -71,25 +114,14 @@ export default function App() {
         <div id="sidebar">
           <h1>Remix Contacts</h1>
           <div>
-            <Form
-              id="search-form"
-              onChange={(event) => {
-                const isFirstSearch = q === null;
-                submit(event.currentTarget, {
-                  replace: !isFirstSearch,
-                });
-              }}
-              role="search"
-            >
+            <Form id="search-form" onChange={handleSearchChange} role="search">
               <input
                 id="q"
                 aria-label="Search contacts"
                 className={searching ? "loading" : ""}
-                // synchronize user's input to component state
-                onChange={(event) => setQuery(event.currentTarget.value)}
+                onChange={handleInputChange}
                 placeholder="Search"
                 type="search"
-                // switched to `value` from `defaultValue`
                 value={query}
                 name="q"
               />
@@ -99,50 +131,17 @@ export default function App() {
               <button type="submit">New</button>
             </Form>
           </div>
-          <nav>
-            {contacts.length ? (
-              <ul>
-                {contacts.map((contact) => (
-                  <li key={contact.id}>
-                    <NavLink
-                      className={({ isActive, isPending }) =>
-                        isActive ? "active" : isPending ? "pending" : ""
-                      }
-                      to={`contacts/${contact.id}`}
-                    >
-                      <Link to={`contacts/${contact.id}`}>
-                        {contact.first || contact.last ? (
-                          <>
-                            {contact.first} {contact.last}
-                          </>
-                        ) : (
-                          <i>No Name</i>
-                        )}{" "}
-                        {contact.favorite ? <span>★</span> : null}
-                      </Link>
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                <i>No contacts</i>
-              </p>
-            )}
-          </nav>
+          <nav>{renderContacts()}</nav>
         </div>
 
         <div
-          className={
-            navigation.state === "loading" && !searching
-              ? "loading"
-              : ""
-          }
           id="detail"
+          className={
+            navigation.state === "loading" && !searching ? "loading" : ""
+          }
         >
           <Outlet />
-          {process.env.NODE_ENV === "development" ? 
-          <LiveReload/> : null}
+          {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
         </div>
 
         <ScrollRestoration />
