@@ -1,6 +1,6 @@
-# Welcome to Remix!
+# Welcome to Remix 101!
 
-- [Remix Docs](https://remix.run/docs)
+- Remix 101 on Vercel [(https://remix-101.vercel.app/)]
 
 ## Development
 
